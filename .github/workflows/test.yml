@@ -1,0 +1,29 @@
+name: Tests
+
+# Fork-owned guardrail. Runs the jest suite — including the security test
+# src/__tests__/private-keys-redaction.test.ts — on every push/PR to main and on
+# demand. On a sync PR, pull_request CI checks out the MERGE ref (fork main + the
+# upstream tag merged), so the redaction test runs against the merged tree: if an
+# upstream sync drops the private_key redaction, this fails RED before merge.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm test

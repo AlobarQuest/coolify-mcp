@@ -47,6 +47,18 @@ function wrap<T>(
     }));
 }
 
+// SECURITY (fork delta — must survive upstream sync): SSH private key material must
+// never leave the server. Strip `private_key` from any PrivateKey returned to the MCP
+// client. Applies to private_keys list/get/update ONLY — `create` takes private_key as
+// INPUT (its response is a UuidResponse, no key) and `delete` returns a message.
+// Guarded by src/__tests__/private-keys-redaction.test.ts; if an upstream sync drops this
+// redaction, that test fails CI (.github/workflows/test.yml). Sibling bug class: the
+// coolify_list_app_envs real_value leak. Keep this small and recognizable.
+function redactPrivateKey<T extends { private_key?: string }>(pk: T): Omit<T, 'private_key'> {
+  const { private_key, ...rest } = pk;
+  return rest;
+}
+
 const TRUNCATION_PREFIX = '...[truncated]...\n';
 
 interface LogEntry {
@@ -1234,11 +1246,15 @@ export class CoolifyMcpServer extends McpServer {
       async ({ action, uuid, name, description, private_key }) => {
         switch (action) {
           case 'list':
-            return wrap(() => this.client.listPrivateKeys());
+            // SECURITY: strip private_key material (see redactPrivateKey)
+            return wrap(async () =>
+              (await this.client.listPrivateKeys()).map(redactPrivateKey),
+            );
           case 'get':
             if (!uuid)
               return { content: [{ type: 'text' as const, text: 'Error: uuid required' }] };
-            return wrap(() => this.client.getPrivateKey(uuid));
+            // SECURITY: strip private_key material (see redactPrivateKey)
+            return wrap(async () => redactPrivateKey(await this.client.getPrivateKey(uuid)));
           case 'create':
             if (!private_key)
               return { content: [{ type: 'text' as const, text: 'Error: private_key required' }] };
@@ -1252,8 +1268,11 @@ export class CoolifyMcpServer extends McpServer {
           case 'update':
             if (!uuid)
               return { content: [{ type: 'text' as const, text: 'Error: uuid required' }] };
-            return wrap(() =>
-              this.client.updatePrivateKey(uuid, { name, description, private_key }),
+            // SECURITY: strip private_key material from the response (see redactPrivateKey)
+            return wrap(async () =>
+              redactPrivateKey(
+                await this.client.updatePrivateKey(uuid, { name, description, private_key }),
+              ),
             );
           case 'delete':
             if (!uuid)
