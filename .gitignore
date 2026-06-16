@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# Python bytecode cache (fork CI scripts under .github/scripts/)
+__pycache__/
+*.pyc
+
 # Build output
 dist/
 build/
