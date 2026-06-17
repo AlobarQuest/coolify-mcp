@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED / RETIRED (2026-06-17)**
+> This fork is no longer maintained. It was retired from Devon's fork-and-scan
+> supply chain, **superseded by an in-house `infraops` MCP server** that absorbed
+> the Coolify tooling we used plus our own security auditing. Code kept read-only
+> for reference.
+
 # Coolify MCP Server
 
 [![npm version](https://img.shields.io/npm/v/@masonator/coolify-mcp.svg)](https://www.npmjs.com/package/@masonator/coolify-mcp)
